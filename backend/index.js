@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+require('./database/db');
 
 // Inicializar la app
 const app = express();
@@ -13,6 +14,12 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.json({ mensaje: '¡Servidor Backend de Contactos funcionando!' });
 });
+
+// Registrar Rutas
+app.use('/api/roles', require('./routes/rolesRoutes'));
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/contactos', require('./routes/contactosRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Iniciar servidor
 const PORT = process.env.PORT || 4000;
