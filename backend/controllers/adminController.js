@@ -1,4 +1,5 @@
 const pool = require('../database/db');
+const bcrypt = require('bcryptjs'); // Necesario para encriptar la contraseña del nuevo usuario
 
 // Listar todos los usuarios del sistema
 const obtenerUsuarios = async (req, res) => {
@@ -33,7 +34,56 @@ const actualizarUsuarioAdmin = async (req, res) => {
     }
 };
 
+// Crear un nuevo usuario desde el panel admin (Ruta POST faltante)
+const crearUsuarioAdmin = async (req, res) => {
+    const { nombres, apellidos, email, password, rol_id } = req.body;
+
+    try {
+        // 1. Verificar si el correo ya existe
+        const userExists = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ error: 'El correo electrónico ya está registrado en el sistema.' });
+        }
+
+        // 2. Encriptar la contraseña por seguridad
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // 3. Guardar el usuario en PostgreSQL
+        const result = await pool.query(
+            'INSERT INTO usuarios (nombres, apellidos, email, password, rol_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, nombres, apellidos, email, rol_id',
+            [nombres, apellidos, email, hashedPassword, rol_id]
+        );
+
+        res.status(201).json({ mensaje: 'Usuario creado exitosamente', usuario: result.rows[0] });
+    } catch (error) {
+        console.error('Error al crear usuario:', error.message);
+        res.status(500).json({ error: 'Error interno del servidor al crear usuario.' });
+    }
+};
+
+// Eliminar un usuario desde el panel admin (Ruta DELETE faltante)
+const eliminarUsuarioAdmin = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query('DELETE FROM usuarios WHERE id = $1 RETURNING *', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+
+        res.status(200).json({ mensaje: 'Usuario eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error al eliminar usuario:', error.message);
+        res.status(500).json({ error: 'Error interno del servidor al eliminar usuario.' });
+    }
+};
+
+// Exportamos todas las funciones para que las rutas puedan utilizarlas
 module.exports = {
     obtenerUsuarios,
-    actualizarUsuarioAdmin
+    actualizarUsuarioAdmin,
+    crearUsuarioAdmin,
+    eliminarUsuarioAdmin
 };
